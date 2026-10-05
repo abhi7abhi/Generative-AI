@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local GitHub Code Explainer | Understand Any Repository With Local AI</title>
+  <meta name="description" content="Explain public GitHub repositories in simple language using a local LLM (Ollama / Llama 3.2). Safe, private, and zero cloud APIs.">
+
+  <!-- Modern Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+  <!-- Ambient Floating Background Orbs -->
+  <div class="app-background">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <div class="glow-orb orb-3"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <!-- Terminal / Code Explainer SVG Icon -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Local GitHub Code Explainer</h1>
+          <p class="brand-subtitle">Understand any GitHub repository using your local AI</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Beginner / Developer Mode Switcher -->
+        <div class="mode-toggle-group" title="Select explanation depth">
+          <button id="modeBtnBeginner" class="mode-btn active" type="button">
+            <span>🌱 Beginner Mode</span>
+          </button>
+          <button id="modeBtnDeveloper" class="mode-btn" type="button">
+            <span>⚡ Developer Mode</span>
+          </button>
+        </div>
+
+        <!-- Live Connection Badges -->
+        <div class="status-badges">
+          <div class="status-badge" id="backendStatus" title="Flask Backend Status">
+            <span class="pulse-dot" id="backendDot"></span>
+            <span id="backendStatusText">Flask Backend</span>
+          </div>
+          <div class="status-badge" id="ollamaStatus" title="Local Ollama AI Status">
+            <span class="pulse-dot" id="ollamaDot"></span>
+            <span id="ollamaStatusText">Local Ollama AI</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Hero / Repository Input Section -->
+    <section class="hero-card">
+      <h2 class="hero-title">Explain Any GitHub Repository</h2>
+      <p class="hero-desc">Paste a GitHub repository URL and let your local AI explain the codebase in simple language.</p>
+
+      <form id="explainRepoForm" class="repo-input-wrapper">
+        <div class="repo-input-form">
+          <div class="input-icon">
+            <!-- GitHub Octocat Icon -->
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+          </div>
+          <input
+            type="url"
+            id="repoUrlInput"
+            class="repo-input"
+            placeholder="https://github.com/username/repository"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="submit" id="btnExplain" class="btn btn-ai">
+            <span class="btn-sparkle">✨</span>
+            <span id="btnExplainText">Explain Repository</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Quick Examples & Helper text -->
+      <div class="example-chips">
+        <span class="chip-label">Try an example:</span>
+        <button type="button" class="example-chip" data-url="https://github.com/octocat/Hello-World">octocat/Hello-World</button>
+        <button type="button" class="example-chip" data-url="https://github.com/pallets/flask">pallets/flask</button>
+        <button type="button" class="example-chip" data-url="https://github.com/tiangolo/fastapi">tiangolo/fastapi</button>
+        <button type="button" class="example-chip" data-url="https://github.com/example/expense-tracker">example/expense-tracker</button>
+      </div>
+    </section>
+
+    <!-- Analysis Progress Card (Appears during processing) -->
+    <section id="progressSection" class="glass-card progress-card" style="display: none;">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">
+            <span>Repository Analysis Progress</span>
+          </h3>
+          <p class="card-desc" id="progressRepoTarget">Analyzing repository...</p>
+        </div>
+        <div id="progressOverallBadge" class="status-badge">
+          <span class="pulse-dot online"></span>
+          <span id="progressOverallText">Processing</span>
+        </div>
+      </div>
+
+      <!-- Real Backend Processing Checklist -->
+      <div class="progress-steps-list" id="progressStepsList">
+        <div class="progress-step-item pending" id="step-validate">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Repository URL validated</span>
+        </div>
+        <div class="progress-step-item pending" id="step-clone">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Repository cloned</span>
+        </div>
+        <div class="progress-step-item pending" id="step-scan">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Repository scanned</span>
+        </div>
+        <div class="progress-step-item pending" id="step-identify">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Source files identified</span>
+        </div>
+        <div class="progress-step-item pending" id="step-extract">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Extracting code & preparing context</span>
+        </div>
+        <div class="progress-step-item pending" id="step-llm">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Asking local LLM (Llama 3.2)</span>
+        </div>
+        <div class="progress-step-item pending" id="step-complete">
+          <span class="step-icon pending">○</span>
+          <span class="step-label">Generating explanation</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error Alert Card (Shown if URL invalid or Ollama offline) -->
+    <div id="errorAlertCard" class="glass-card" style="display: none; border-color: rgba(239, 68, 68, 0.4);">
+      <div style="display: flex; align-items: flex-start; gap: 14px;">
+        <span style="font-size: 1.5rem;">⚠️</span>
+        <div>
+          <h3 style="font-family: var(--font-heading); color: #fca5a5; margin-bottom: 4px;" id="errorTitle">Analysis Notice</h3>
+          <p style="color: #cbd5e1; font-size: 0.9rem;" id="errorMessage">Something went wrong.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Repository Information Bar (Metadata from actual repo) -->
+    <section id="repoSummarySection" class="repo-summary-bar" style="display: none;">
+      <div class="summary-metric">
+        <div class="metric-label">Repository</div>
+        <div class="metric-val" id="summaryRepoName">—</div>
+      </div>
+
+      <div class="summary-metric">
+        <div class="metric-label">GitHub URL</div>
+        <div class="metric-val" style="font-size: 0.95rem;">
+          <a id="summaryRepoLink" href="#" target="_blank" rel="noopener noreferrer">—</a>
+        </div>
+      </div>
+
+      <div class="summary-metric">
+        <div class="metric-label">Files Analyzed</div>
+        <div class="metric-val" id="summaryFilesCount">0</div>
+      </div>
+
+      <div class="summary-metric">
+        <div class="metric-label">Languages</div>
+        <div class="languages-tag-cloud" id="summaryLanguagesCloud">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="summary-metric">
+        <div class="metric-label">AI Model</div>
+        <div class="metric-val" style="font-size: 1.1rem; color: #c084fc;" id="summaryModel">Llama 3.2</div>
+      </div>
+
+      <div class="summary-metric">
+        <div class="metric-label">Status</div>
+        <div class="metric-val" style="font-size: 1.05rem; color: #34d399;" id="summaryStatus">Analysis Complete</div>
+      </div>
+    </section>
+
+    <!-- Main Results Dashboard Grid -->
+    <main id="resultsMainGrid" class="dashboard-grid" style="display: none;">
+      <!-- Left Column: Directory Tree & File Explorer -->
+      <section class="dashboard-left">
+        <!-- Project Structure / Directory Tree Card -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <span>📁 Repository Structure</span>
+              </h2>
+              <p class="card-desc">Dynamic directory hierarchy from cloned repo</p>
+            </div>
+            <button id="btnCopyTree" class="btn btn-ghost" title="Copy directory tree">Copy Tree</button>
+          </div>
+
+          <div class="tree-container" id="directoryTreeBox">
+            <!-- Populated dynamically with ASCII tree -->
+          </div>
+        </div>
+
+        <!-- File Explorer Card -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">
+                <span>🗂️ File Explorer</span>
+              </h2>
+              <p class="card-desc" id="fileExplorerCount">Scanned source files</p>
+            </div>
+          </div>
+
+          <div class="file-explorer-list" id="fileExplorerList">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: AI Explanations & Deep Dives -->
+      <section class="dashboard-right">
+        <div class="glass-card ai-card glow-border">
+          <div class="ai-header">
+            <div class="ai-brand-group">
+              <div class="ai-sparkle-icon">✨</div>
+              <div>
+                <h2 class="card-title" id="explanationCardTitle">Repository Explanation</h2>
+                <p class="card-desc" id="explanationSubtitle">Generated by local Ollama (Llama 3.2) &bull; Zero Cloud</p>
+              </div>
+            </div>
+
+            <!-- Action Controls: Copy & Download Report -->
+            <div class="ai-actions-group">
+              <button id="btnCopyExplanation" class="btn btn-ghost" title="Copy full explanation to clipboard">
+                <span>📋</span>
+                <span id="btnCopyText">Copy Explanation</span>
+              </button>
+              <button id="btnDownloadReport" class="btn btn-primary" title="Download markdown report">
+                <span>💾</span>
+                <span>Download Report</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 1: Project Overview -->
+          <div class="explanation-section">
+            <h3 class="section-heading">
+              <span>📌 Project Overview</span>
+            </h3>
+            <div class="section-body" id="explanationOverview">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 2: Technologies Used -->
+          <div class="explanation-section">
+            <h3 class="section-heading">
+              <span>🛠️ Technologies Used</span>
+            </h3>
+            <div class="tech-badges-grid" id="explanationTechs">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 3: Main Features -->
+          <div class="explanation-section">
+            <h3 class="section-heading">
+              <span>⭐ Main Features</span>
+            </h3>
+            <ul class="features-list" id="explanationFeatures">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- Section 4: Important Files -->
+          <div class="explanation-section">
+            <h3 class="section-heading">
+              <span>📄 Important Files</span>
+            </h3>
+            <div class="important-files-grid" id="explanationFilesGrid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 5: How It Works -->
+          <div class="explanation-section">
+            <h3 class="section-heading">
+              <span>🔄 How It Works</span>
+            </h3>
+            <div class="workflow-box" id="explanationWorkflow">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 6: Beginner Explanation (or Developer Insights) -->
+          <div class="explanation-section">
+            <h3 class="section-heading" id="beginnerSectionHeading">
+              <span>💡 Beginner-Friendly Explanation</span>
+            </h3>
+            <div class="beginner-callout" id="explanationBeginner">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Initial Placeholder State (Before first search) -->
+    <section id="initialPlaceholderSection" class="glass-card">
+      <div class="ai-placeholder">
+        <div class="placeholder-icon">🧠</div>
+        <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 8px;">Ready to Analyze Any GitHub Repository</h3>
+        <p style="color: var(--text-secondary); max-width: 580px; margin: 0 auto; line-height: 1.6;">
+          Paste a public GitHub link above and click <strong>"Explain Repository"</strong>.
+          Your local AI will clone the codebase into memory, scan the files, and explain how it works without sending any data to the cloud.
+        </p>
+
+        <div class="placeholder-steps">
+          <div class="placeholder-step">1. Validate URL</div>
+          <div class="placeholder-step">2. Safe Shallow Clone</div>
+          <div class="placeholder-step">3. Scan Source Code</div>
+          <div class="placeholder-step">4. Local Llama 3.2 Analysis</div>
+          <div class="placeholder-step">5. Instant Explanation</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Local GitHub Repository Code Explainer &bull; Powered by Python Flask &bull; Local Ollama (Llama 3.2)</p>
+    </footer>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Client Application Script -->
+  <script src="/static/js/app.js"></script>
+  <script src="../static/js/app.js"></script>
+</body>
+</html>
